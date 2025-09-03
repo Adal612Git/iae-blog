@@ -41,7 +41,16 @@
           <q-card-section>
             <div class="text-subtitle1">{{ p.title }}</div>
             <div class="q-mt-sm">{{ p.content }}</div>
-            <div class="q-mt-sm" v-if="p.filePath"><code>{{ p.filePath }}</code></div>
+            <div class="q-mt-md" v-if="p.filePath || p.image || p.video">
+              <template v-if="p.filePath">
+                <img v-if="isImagePath(p.filePath)" :src="mediaUrl(p.filePath)" style="max-width: 100%" />
+                <video v-else :src="mediaUrl(p.filePath)" controls style="max-width: 100%"></video>
+              </template>
+              <template v-else>
+                <img v-if="p.image" :src="mediaUrl(p.image)" style="max-width: 100%" />
+                <video v-else-if="p.video" :src="mediaUrl(p.video)" controls style="max-width: 100%"></video>
+              </template>
+            </div>
           </q-card-section>
           <q-separator />
           <q-card-actions>
@@ -182,6 +191,19 @@ async function onDelete(p: Post) {
   } finally {
     loadingDeleteId.value = null;
   }
+}
+
+function mediaUrl(path: string) {
+  if (!path) return '';
+  if (/^https?:\/\//i.test(path)) return path;
+  const normalized = path.includes('/uploads/')
+    ? path.slice(path.indexOf('/uploads/'))
+    : path;
+  return `http://localhost:5000${normalized.startsWith('/') ? normalized : '/' + normalized}`;
+}
+
+function isImagePath(path: string) {
+  return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(path);
 }
 </script>
 

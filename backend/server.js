@@ -43,6 +43,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/private', privateRoutes);
 
+// Servir archivos subidos (imagenes/videos)
+app.use('/uploads', express.static(path.resolve(__dirname, 'uploads')));
+
 const PORT = 5000;
 app.listen(PORT, () => {
   console.log('Servidor corriendo en http://localhost:5000');

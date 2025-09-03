@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { getPosts, createPost as apiCreate, updatePost as apiUpdate, deletePost as apiDelete } from '../services/api.js';
+import { getPosts, createPost as apiCreate, updatePost as apiUpdate, deletePost as apiDelete } from '../services/api';
 import { useAuthStore } from './authStore';
 
 export interface Post {
@@ -47,19 +47,19 @@ export const usePostStore = defineStore('posts', {
     },
     async createPost(payload: { title: string; content: string; file?: File | null }) {
       const token = useAuthStore().token;
-      const res = await apiCreate(token, payload);
+      const res = await apiCreate({ title: payload.title, content: payload.content, ...(payload.file ? { file: payload.file } : {}) }, token);
       await this.fetchPosts();
       return res;
     },
     async updatePost(id: string | number, payload: { title?: string; content?: string; file?: File | null }) {
       const token = useAuthStore().token;
-      const res = await apiUpdate(token, String(id), payload);
+      const res = await apiUpdate(String(id), { ...(payload.title != null ? { title: payload.title } : {}), ...(payload.content != null ? { content: payload.content } : {}), ...(payload.file ? { file: payload.file } : {}) }, token);
       await this.fetchPosts();
       return res;
     },
     async deletePost(id: string | number) {
       const token = useAuthStore().token;
-      const res = await apiDelete(token, String(id));
+      const res = await apiDelete(String(id), token);
       await this.fetchPosts();
       return res;
     },

@@ -32,8 +32,8 @@ export async function createPost(req, res) {
       const relPath = `/uploads/${file.filename}`;
       if (isImage) image = relPath;
       else if (isVideo) video = relPath;
-      // Guardar también la ruta proporcionada por multer
-      filePath = file.path;
+      // Guardar ruta relativa accesible desde el navegador
+      filePath = relPath;
     }
 
     const post = await Post.create({
@@ -79,8 +79,8 @@ export async function updatePost(req, res) {
         update.video = relPath;
         update.image = undefined;
       }
-      // Actualizar filePath absoluto de multer
-      update.filePath = file.path;
+      // Actualizar filePath con ruta relativa accesible
+      update.filePath = relPath;
     }
 
     const updated = await Post.findByIdAndUpdate(id, update, { new: true });

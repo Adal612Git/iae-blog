@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { login as apiLogin } from '../services/api.js';
+import { login as apiLogin } from '../services/api';
 
 interface User {
   [key: string]: unknown;
@@ -24,8 +24,7 @@ export const useAuthStore = defineStore('auth', {
       this.loading = true;
       this.error = '';
       try {
-        const data = await apiLogin({ email, password });
-        const token = (data as { token?: string }).token;
+        const { token } = await apiLogin(email, password);
         if (token) {
           this.token = token;
           localStorage.setItem('auth_token', token);

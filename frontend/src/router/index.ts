@@ -16,7 +16,8 @@ export default defineRouter(function () {
   });
 
   Router.beforeEach((to, _from, next) => {
-    if (to.meta?.requiresAuth) {
+    const needsAuth = to.meta?.requiresAuth || to.path === '/dashboard';
+    if (needsAuth) {
       const token = localStorage.getItem('auth_token');
       if (!token) return next({ path: '/login', query: { redirect: to.fullPath } });
     }
