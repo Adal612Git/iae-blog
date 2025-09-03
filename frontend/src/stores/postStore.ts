@@ -1,0 +1,67 @@
+import { defineStore } from 'pinia';
+import { getPosts, createPost as apiCreate, updatePost as apiUpdate, deletePost as apiDelete } from '../services/api.js';
+import { useAuthStore } from './authStore';
+
+export interface Post {
+  _id?: string;
+  id?: string | number;
+  title: string;
+  content: string;
+  createdAt?: string;
+  views?: number;
+  likes?: number;
+  image?: string;
+  video?: string;
+  filePath?: string;
+}
+
+interface PostState {
+  posts: Post[];
+  loading: boolean;
+  error: string;
+}
+
+export const usePostStore = defineStore('posts', {
+  state: (): PostState => ({ posts: [], loading: false, error: '' }),
+  actions: {
+    async fetchPosts() {
+      this.loading = true;
+      this.error = '';
+      try {
+        const data = await getPosts();
+        this.posts = Array.isArray(data) ? (data as Post[]) : [];
+      } catch (e: unknown) {
+        let message = 'No se pudieron cargar las publicaciones';
+        if (typeof e === 'object' && e && 'response' in e) {
+          const r = (e as { response?: { data?: { message?: unknown } } }).response;
+          const m = r?.data?.message;
+          message = typeof m === 'string' ? m : message;
+        } else if (e instanceof Error) {
+          message = e.message;
+        }
+        this.error = message;
+        throw e;
+      } finally {
+        this.loading = false;
+      }
+    },
+    async createPost(payload: { title: string; content: string; file?: File | null }) {
+      const token = useAuthStore().token;
+      const res = await apiCreate(token, payload);
+      await this.fetchPosts();
+      return res;
+    },
+    async updatePost(id: string | number, payload: { title?: string; content?: string; file?: File | null }) {
+      const token = useAuthStore().token;
+      const res = await apiUpdate(token, String(id), payload);
+      await this.fetchPosts();
+      return res;
+    },
+    async deletePost(id: string | number) {
+      const token = useAuthStore().token;
+      const res = await apiDelete(token, String(id));
+      await this.fetchPosts();
+      return res;
+    },
+  },
+});
