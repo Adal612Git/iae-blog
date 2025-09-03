@@ -1,10 +1,14 @@
-import { Router } from 'express';
-import { getPosts, createPost } from '../controllers/postController.js';
+import express from 'express';
+import { authenticateJWT } from '../middlewares/authMiddleware.js';
+import { requireAdmin } from '../middlewares/adminMiddleware.js';
+import upload from '../middlewares/upload.js';
+import { getPosts, createPost, updatePost, deletePost } from '../controllers/postController.js';
 
-const router = Router();
+const router = express.Router();
 
 router.get('/', getPosts);
-router.post('/', createPost);
+router.post('/', authenticateJWT, requireAdmin, upload, createPost);
+router.put('/:id', authenticateJWT, requireAdmin, upload, updatePost);
+router.delete('/:id', authenticateJWT, requireAdmin, deletePost);
 
 export default router;
-

@@ -8,6 +8,7 @@ const PostSchema = new Schema(
     content: { type: String, required: true },
     image: { type: String, required: false },
     video: { type: String, required: false },
+    filePath: { type: String, required: false },
     createdAt: { type: Date, required: true, default: Date.now },
     views: { type: Number, required: true, default: 0 },
     likes: { type: Number, required: true, default: 0 },
@@ -17,4 +18,3 @@ const PostSchema = new Schema(
 );
 
 export default model('Post', PostSchema);
-
