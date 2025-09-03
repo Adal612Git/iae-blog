@@ -2,11 +2,26 @@ import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
+import passport from 'passport';
+import initPassport from './passportConfig.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 import authRoutes from './routes/auth.js';
 import postRoutes from './routes/posts.js';
+import privateRoutes from './routes/private.js';
+import './db.js';
 
-dotenv.config();
+// Cargar .env desde backend/.env sin depender del cwd
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+// Validar JWT_SECRET antes de inicializar Passport
+if (!process.env.JWT_SECRET) {
+  console.error('JWT_SECRET no está definida. Añádela en backend/.env');
+  process.exit(1);
+}
 
 const app = express();
 
@@ -15,6 +30,8 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(passport.initialize());
+initPassport(passport);
 
 // Ping route
 app.get('/api/ping', (_req, res) => {
@@ -24,9 +41,9 @@ app.get('/api/ping', (_req, res) => {
 // Rutas API
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
+app.use('/api/private', privateRoutes);
 
 const PORT = 5000;
 app.listen(PORT, () => {
   console.log('Servidor corriendo en http://localhost:5000');
 });
-
