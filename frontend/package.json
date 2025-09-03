@@ -12,6 +12,8 @@
     "test": "echo \"No test specified\" && exit 0",
     "dev": "quasar dev",
     "build": "quasar build",
+    "dev:ssr": "quasar dev -m ssr",
+    "build:ssr": "quasar build -m ssr",
     "postinstall": "quasar prepare"
   },
   "dependencies": {

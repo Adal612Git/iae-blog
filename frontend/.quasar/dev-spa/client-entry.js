@@ -42,6 +42,8 @@ import quasarUserOptions from './quasar-user-options.js'
 
 
 
+import { addPreFetchHooks } from './client-prefetch.js'
+
 
 
 console.info('[Quasar] Running SPA.')
@@ -113,6 +115,8 @@ async function start ({
 
   
 
+    
+    addPreFetchHooks({ router })
     
 
     

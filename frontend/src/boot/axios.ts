@@ -1,7 +1,8 @@
 import { boot } from 'quasar/wrappers';
 import axios from 'axios';
 
-export const api = axios.create({ baseURL: 'http://localhost:5000/api' });
+const baseURL = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api';
+export const api = axios.create({ baseURL });
 
 export default boot(({ app }) => {
   app.config.globalProperties.$axios = axios;
@@ -14,4 +15,3 @@ declare module '@vue/runtime-core' {
     $api: typeof api;
   }
 }
-

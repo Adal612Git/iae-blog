@@ -1,13 +1,40 @@
 <template>
-  <q-header elevated>
+  <q-header elevated class="bg-primary text-white">
     <q-toolbar>
       <q-toolbar-title>IAE Blog</q-toolbar-title>
-      <q-btn flat dense no-caps to="/" label="Home" />
-      <q-btn flat dense no-caps to="/info" label="Info" />
-      <q-btn v-if="!isAuth" flat dense no-caps to="/login" label="Login" />
-      <q-btn v-else flat dense no-caps to="/dashboard" label="Dashboard" />
+
+      <q-btn flat dense no-caps to="/" label="Home" color="white" />
+      <q-btn flat dense no-caps to="/info" label="Info" color="white" />
+      <q-btn
+        v-if="!isAuth"
+        flat
+        dense
+        no-caps
+        to="/login"
+        label="Login"
+        color="white"
+      />
+      <q-btn
+        v-else
+        flat
+        dense
+        no-caps
+        to="/dashboard"
+        label="Dashboard"
+        color="white"
+      />
+
       <q-space />
-      <q-btn v-if="isAuth" flat dense no-caps label="Logout" @click="onLogout" />
+
+      <q-btn
+        v-if="isAuth"
+        flat
+        dense
+        icon="logout"
+        color="white"
+        @click="onLogout"
+        aria-label="Logout"
+      />
     </q-toolbar>
   </q-header>
 </template>

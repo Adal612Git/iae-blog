@@ -10,6 +10,18 @@ export async function getPosts(_req, res) {
   }
 }
 
+export async function getPostById(req, res) {
+  try {
+    const { id } = req.params;
+    const post = await Post.findById(id);
+    if (!post) return res.status(404).json({ message: 'Publicación no encontrada' });
+    return res.json(post);
+  } catch (err) {
+    console.error('getPostById error:', err);
+    return res.status(500).json({ message: 'Error al obtener publicación' });
+  }
+}
+
 export async function createPost(req, res) {
   try {
     const currentUser = req.user;
@@ -106,5 +118,29 @@ export async function deletePost(req, res) {
   } catch (err) {
     console.error('deletePost error:', err);
     return res.status(500).json({ message: 'Error al eliminar la publicación' });
+  }
+}
+
+export async function incrementViews(req, res) {
+  try {
+    const { id } = req.params;
+    const updated = await Post.findByIdAndUpdate(id, { $inc: { views: 1 } }, { new: true });
+    if (!updated) return res.status(404).json({ message: 'Publicación no encontrada' });
+    return res.json({ id: updated._id, views: updated.views });
+  } catch (err) {
+    console.error('incrementViews error:', err);
+    return res.status(500).json({ message: 'Error al incrementar vistas' });
+  }
+}
+
+export async function incrementLikes(req, res) {
+  try {
+    const { id } = req.params;
+    const updated = await Post.findByIdAndUpdate(id, { $inc: { likes: 1 } }, { new: true });
+    if (!updated) return res.status(404).json({ message: 'Publicación no encontrada' });
+    return res.json({ id: updated._id, likes: updated.likes });
+  } catch (err) {
+    console.error('incrementLikes error:', err);
+    return res.status(500).json({ message: 'Error al incrementar likes' });
   }
 }

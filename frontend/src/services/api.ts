@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-export const api = axios.create({ baseURL: 'http://localhost:5000/api' });
+const baseURL = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api';
+export const api = axios.create({ baseURL });
 
 function authHeaders(token?: string) {
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -89,3 +90,14 @@ export async function deletePost(id: string, token: string): Promise<unknown> {
 }
 
 export default { api, login, getPosts, createPost, updatePost, deletePost };
+export async function incrementView(id: string): Promise<{ id: string; views: number }> {
+  const { data } = await api.post<{ id: string; views: number }>(`/posts/${id}/view`);
+  return data;
+}
+
+export async function likePost(id: string): Promise<{ id: string; likes: number }> {
+  const { data } = await api.post<{ id: string; likes: number }>(`/posts/${id}/like`);
+  return data;
+}
+
+export { };
