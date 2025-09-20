@@ -2,6 +2,44 @@
   <q-page class="q-pa-md">
     <div class="text-h5 q-mb-md">Dashboard</div>
 
+    <!-- Configuración -->
+    <q-card class="q-mb-lg shadow-2 rounded-borders" bordered>
+      <q-card-section>
+        <div class="text-h6">Configuración del sitio</div>
+      </q-card-section>
+      <q-separator />
+      <q-card-section>
+        <div class="row q-col-gutter-md">
+          <div class="col-12 col-md-6">
+            <div class="text-subtitle2 q-mb-sm">Destacados en Home</div>
+            <q-select
+              v-model="localSettings.featuredLayout"
+              :options="featuredOptions"
+              label="Cantidad de destacados"
+              dense outlined emit-value map-options
+            />
+          </div>
+          <div class="col-12 col-md-6">
+            <q-expansion-item icon="palette" label="Colores de marca" dense expand-separator>
+              <div class="q-mt-sm">
+                <div class="row q-col-gutter-sm">
+                  <div v-for="key in colorKeys" :key="key" class="col-6 col-md-4 q-mb-sm">
+                    <div class="text-caption q-mb-xs">{{ key }}</div>
+                    <q-color v-model="localSettings.colors[key]" format="hex" default-view="palette" no-header no-footer flat />
+                  </div>
+                </div>
+              </div>
+            </q-expansion-item>
+          </div>
+        </div>
+        <div class="row q-col-gutter-sm q-mt-md">
+          <div class="col-auto"><q-btn color="primary" unelevated rounded :loading="savingSettings" label="Guardar configuración" @click="saveSettings" /></div>
+          <div class="col-auto"><q-btn flat rounded label="Aplicar sin guardar" @click="applyLocalColors" /></div>
+        </div>
+        <q-banner v-if="errorSettings" class="bg-red-2 text-red-10 q-mt-sm" dense>{{ errorSettings }}</q-banner>
+      </q-card-section>
+    </q-card>
+
     <q-card class="q-mb-lg shadow-2 rounded-borders" bordered>
       <q-card-section>
         <div class="text-h6">Crear publicación</div>
@@ -52,11 +90,11 @@
             <div class="q-mt-md" v-if="p.filePath || p.image || p.video">
               <template v-if="p.filePath">
                 <q-img v-if="isImagePath(p.filePath)" :src="mediaUrl(p.filePath)" class="rounded-borders thumb-300" fit="cover" @error="onMediaError(p.filePath)" />
-                <video v-else :src="mediaUrl(p.filePath)" controls class="rounded-borders thumb-300 q-mt-md" @error="onMediaError(p.filePath)" style="object-fit: cover;"></video>
+                <AutoVideo v-else :src="mediaUrl(p.filePath)" class="rounded-borders thumb-300 q-mt-md" @error="onMediaError(p.filePath)" />
               </template>
               <template v-else>
                 <q-img v-if="p.image" :src="mediaUrl(p.image)" class="rounded-borders thumb-300" fit="cover" @error="onMediaError(p.image)" />
-                <video v-else-if="p.video" :src="mediaUrl(p.video)" controls class="rounded-borders thumb-300 q-mt-md" @error="onMediaError(p.video)" style="object-fit: cover;"></video>
+                <AutoVideo v-else-if="p.video" :src="mediaUrl(p.video)" class="rounded-borders thumb-300 q-mt-md" @error="onMediaError(p.video)" />
               </template>
             </div>
           </q-card-section>
@@ -79,13 +117,51 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue';
+import AutoVideo from '../components/AutoVideo.vue';
 import { usePostStore, type Post } from '../stores/postStore';
 import { likePost } from '../services/api';
 import { useQuasar } from 'quasar';
 import { computeMediaUrl as computeUrl, isImagePath as isImg } from '../utils/media';
+import { useSettingsStore } from '../stores/settingsStore';
+import type { SettingsDto } from '../services/api';
 
 const postStore = usePostStore();
 const $q = useQuasar();
+const settingsStore = useSettingsStore();
+
+// Settings local copy for editing
+const featuredOptions = [
+  { label: '1 destacado', value: 1 },
+  { label: '2 destacados', value: 2 },
+  { label: '4 destacados', value: 4 },
+];
+const colorKeys = ['primary', 'secondary', 'accent', 'positive', 'negative', 'info', 'warning'] as const;
+const localSettings = reactive<{ featuredLayout: 1 | 2 | 4; colors: SettingsDto['colors'] }>({
+  featuredLayout: settingsStore.featuredLayout,
+  colors: { ...settingsStore.colors },
+});
+const savingSettings = ref(false);
+const errorSettings = ref('');
+
+function applyLocalColors() {
+  settingsStore.colors = { ...settingsStore.colors, ...localSettings.colors } as SettingsDto['colors'];
+  settingsStore.applyColors();
+}
+
+async function saveSettings() {
+  savingSettings.value = true;
+  errorSettings.value = '';
+  try {
+    await settingsStore.update({ featuredLayout: localSettings.featuredLayout, colors: { ...localSettings.colors } });
+    $q.notify({ type: 'positive', message: 'Configuración guardada' });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'No se pudo guardar la configuración';
+    errorSettings.value = msg;
+    $q.notify({ type: 'negative', message: msg });
+  } finally {
+    savingSettings.value = false;
+  }
+}
 
 // Listado
 const posts = computed<Post[]>(() => postStore.posts);

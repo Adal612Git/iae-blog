@@ -6,10 +6,14 @@ import passport from 'passport';
 import initPassport from './passportConfig.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import http from 'http';
+import { initSocket } from './socket.js';
 
 import authRoutes from './routes/auth.js';
 import postRoutes from './routes/posts.js';
 import privateRoutes from './routes/private.js';
+import healthRoutes from './routes/health.js';
+import settingsRoutes from './routes/settings.js';
 import './db.js';
 
 // Cargar .env desde backend/.env sin depender del cwd
@@ -42,11 +46,20 @@ app.get('/api/ping', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/private', privateRoutes);
+app.use('/api/health', healthRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Servir archivos subidos (imagenes/videos)
 app.use('/uploads', express.static(path.resolve(__dirname, 'uploads')));
 
 const PORT = 5000;
-app.listen(PORT, () => {
-  console.log('Servidor corriendo en http://localhost:5000');
-});
+const httpServer = http.createServer(app);
+initSocket(httpServer);
+
+if (process.env.NODE_ENV !== 'test') {
+  httpServer.listen(PORT, () => {
+    console.log('Servidor corriendo en http://localhost:5000');
+  });
+}
+
+export { app, httpServer };

@@ -7,11 +7,11 @@
         <div class="q-mt-md" v-if="post?.filePath || post?.image || post?.video">
           <template v-if="post?.filePath">
             <q-img v-if="isImagePath(post!.filePath!)" :src="mediaUrl(post!.filePath!)" class="rounded-borders thumb-300" fit="cover" />
-            <video v-else :src="mediaUrl(post!.filePath!)" controls class="rounded-borders thumb-300 q-mt-md" style="object-fit: cover;"></video>
+            <AutoVideo v-else :src="mediaUrl(post!.filePath!)" class="rounded-borders thumb-300 q-mt-md" />
           </template>
           <template v-else>
             <q-img v-if="post?.image" :src="mediaUrl(post!.image!)" class="rounded-borders thumb-300" fit="cover" />
-            <video v-else-if="post?.video" :src="mediaUrl(post!.video!)" controls class="rounded-borders thumb-300 q-mt-md" style="object-fit: cover;"></video>
+            <AutoVideo v-else-if="post?.video" :src="mediaUrl(post!.video!)" class="rounded-borders thumb-300 q-mt-md" />
           </template>
         </div>
       </q-card-section>
@@ -25,6 +25,7 @@ import { useRoute } from 'vue-router';
 import { api } from 'boot/axios';
 import { useMeta } from 'quasar';
 import { computeMediaUrl as computeUrl, isImagePath as isImg } from '../utils/media';
+import AutoVideo from '../components/AutoVideo.vue';
 
 interface PostDto { _id?: string; id?: string|number; title: string; content: string; filePath?: string; image?: string; video?: string; createdAt?: string }
 

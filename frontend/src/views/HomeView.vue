@@ -16,13 +16,13 @@
     <div v-if="loading">Cargando...</div>
     <div v-if="!loading && sortedPosts.length === 0">Sin publicaciones</div>
 
-    <!-- Populares -->
-    <div class="text-subtitle1 q-mt-md q-mb-sm">Populares</div>
+    <!-- Destacados (1/2/4) -->
+    <div class="text-subtitle1 q-mt-md q-mb-sm">Destacados</div>
     <div class="row q-col-gutter-md q-mb-lg">
       <div
-        v-for="p in popularPosts"
+        v-for="p in featuredPosts"
         :key="String(p._id || p.id || '')"
-        class="q-ma-sm col-xs-12 col-sm-6 col-md-4"
+        :class="featuredClass"
       >
         <q-card bordered class="shadow-2 rounded-borders full-height">
           <q-card-section>
@@ -31,7 +31,7 @@
           </q-card-section>
           <q-img v-if="p.filePath && isImagePath(p.filePath)" :src="mediaUrl(p.filePath)" class="rounded-borders thumb-300" fit="cover" />
           <q-card-section v-else-if="p.filePath">
-            <video :src="mediaUrl(p.filePath)" class="rounded-borders full-width" controls></video>
+            <AutoVideo :src="mediaUrl(p.filePath)" class="rounded-borders full-width" />
           </q-card-section>
         </q-card>
       </div>
@@ -50,11 +50,11 @@
             <div class="q-mt-md" v-if="p.filePath || p.image || p.video">
               <template v-if="p.filePath">
                 <q-img v-if="isImagePath(p.filePath)" :src="mediaUrl(p.filePath)" class="rounded-borders thumb-300" fit="cover" @error="onMediaError(p.filePath)" />
-                <video v-else :src="mediaUrl(p.filePath)" controls class="rounded-borders thumb-300 q-mt-md" @error="onMediaError(p.filePath)" style="object-fit: cover;"></video>
+                <AutoVideo v-else :src="mediaUrl(p.filePath)" class="rounded-borders thumb-300 q-mt-md" @error="onMediaError(p.filePath)" />
               </template>
               <template v-else>
                 <q-img v-if="p.image" :src="mediaUrl(p.image)" class="rounded-borders thumb-300" fit="cover" @error="onMediaError(p.image)" />
-                <video v-else-if="p.video" :src="mediaUrl(p.video)" controls class="rounded-borders thumb-300 q-mt-md" @error="onMediaError(p.video)" style="object-fit: cover;"></video>
+                <AutoVideo v-else-if="p.video" :src="mediaUrl(p.video)" class="rounded-borders thumb-300 q-mt-md" @error="onMediaError(p.video)" />
               </template>
             </div>
 
@@ -79,11 +79,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import AutoVideo from '../components/AutoVideo.vue';
 import { useRouter } from 'vue-router';
 import { usePostStore, type Post } from '../stores/postStore';
 import { incrementView, likePost } from '../services/api';
 import { useQuasar } from 'quasar';
 import { computeMediaUrl as computeUrl, isImagePath as isImg } from '../utils/media';
+import { useSettingsStore } from '../stores/settingsStore';
 
 const store = usePostStore();
 const router = useRouter();
@@ -95,6 +97,7 @@ const options = [
 
 const loading = computed(() => store.loading);
 const error = computed(() => store.error);
+const settings = useSettingsStore();
 
 async function loadPosts() {
   await store.fetchPosts();
@@ -127,7 +130,16 @@ const sortedPosts = computed<Post[]>(() => {
 
 const popularPosts = computed<Post[]>(() => {
   const arr = Array.isArray(store.posts) ? [...store.posts] : [];
-  return arr.sort((a, b) => score(b) - score(a)).slice(0, 6);
+  return arr.sort((a, b) => score(b) - score(a));
+});
+
+const featuredCount = computed(() => settings.featuredLayout || 2);
+const featuredPosts = computed<Post[]>(() => popularPosts.value.slice(0, featuredCount.value));
+const featuredClass = computed(() => {
+  const n = featuredCount.value;
+  if (n === 1) return 'col-12 q-ma-sm';
+  if (n === 2) return 'col-12 col-md-6 q-ma-sm';
+  return 'col-12 col-sm-6 col-md-3 q-ma-sm';
 });
 
 function score(p: Post) {

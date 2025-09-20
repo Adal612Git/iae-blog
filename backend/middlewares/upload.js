@@ -23,7 +23,7 @@ const storage = multer.diskStorage({
 // Extensiones permitidas por si el mimetype llega vacío o como octet-stream
 const allowedExt = new Set([
   'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg',
-  'mp4', 'webm', 'mov', 'avi', 'mkv', 'mpeg', 'mpg'
+  'mp4', 'm4v', 'webm', 'mov', 'avi', 'mkv', 'mpeg', 'mpg'
 ]);
 
 function isAllowed(file) {
@@ -37,10 +37,11 @@ function isAllowed(file) {
   return false;
 }
 
+const maxMb = Math.max(1, Number(process.env.UPLOAD_MAX_MB || 100));
 const uploader = multer({
   storage,
-  // Permitimos hasta 25MB para dar margen a algunos videos cortos
-  limits: { fileSize: 25 * 1024 * 1024 },
+  // Límite configurable (por defecto 100MB)
+  limits: { fileSize: maxMb * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (isAllowed(file)) return cb(null, true);
     return cb(new Error('Solo se permiten archivos de imagen o video'));

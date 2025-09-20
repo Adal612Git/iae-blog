@@ -101,3 +101,28 @@ export async function likePost(id: string): Promise<{ id: string; likes: number 
 }
 
 export { };
+
+// Settings
+export interface SettingsDto {
+  featuredLayout: 1 | 2 | 4;
+  colors: {
+    primary: string;
+    secondary: string;
+    accent: string;
+    positive: string;
+    negative: string;
+    info: string;
+    warning: string;
+  };
+}
+
+export async function getSettings(): Promise<SettingsDto> {
+  const { data } = await api.get<SettingsDto>('/settings');
+  return data;
+}
+
+export async function updateSettingsApi(payload: Partial<SettingsDto>, token: string): Promise<SettingsDto> {
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const { data } = await api.put<SettingsDto>('/settings', payload, { headers });
+  return data;
+}

@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Install dependencies
 COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # Copy source
 COPY . .
@@ -16,4 +16,3 @@ EXPOSE 5000
 
 # Start server
 CMD ["node", "server.js"]
-

@@ -1,6 +1,7 @@
 import passport from 'passport';
 import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
 import User from './models/User.js';
+import { IS_DEMO } from './config.js';
 
 // Exporta una función que registra la estrategia en la instancia de passport proporcionada
 export default function initPassport(passportInstance = passport) {
@@ -20,6 +21,12 @@ export default function initPassport(passportInstance = passport) {
         const id = jwtPayload?.id || jwtPayload?._id;
         if (!id) {
           return done(null, false);
+        }
+
+        if (IS_DEMO) {
+          // En modo demo devolvemos un usuario ficticio del payload
+          const role = jwtPayload?.role || 'admin';
+          return done(null, { _id: id, email: 'admin@iae.com', role });
         }
 
         const user = await User.findById(id).lean();

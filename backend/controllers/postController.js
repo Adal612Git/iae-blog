@@ -1,7 +1,29 @@
 import Post from '../models/Post.js';
+import { IS_DEMO } from '../config.js';
+import { getIO } from '../socket.js';
+
+// Almacenamiento en memoria para modo demo
+let demoPosts = [
+  {
+    _id: 'p1',
+    title: 'Bienvenido al blog (Demo)',
+    content: 'Estás corriendo el modo demo sin base de datos.',
+    filePath: undefined,
+    image: undefined,
+    video: undefined,
+    createdAt: new Date().toISOString(),
+    views: 3,
+    likes: 1,
+    userId: 'demo-admin',
+  },
+];
 
 export async function getPosts(_req, res) {
   try {
+    if (IS_DEMO) {
+      const sorted = [...demoPosts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      return res.json(sorted);
+    }
     const posts = await Post.find({}).sort({ createdAt: -1 });
     return res.json(posts);
   } catch (err) {
@@ -13,6 +35,11 @@ export async function getPosts(_req, res) {
 export async function getPostById(req, res) {
   try {
     const { id } = req.params;
+    if (IS_DEMO) {
+      const post = demoPosts.find((p) => String(p._id) === String(id));
+      if (!post) return res.status(404).json({ message: 'Publicación no encontrada' });
+      return res.json(post);
+    }
     const post = await Post.findById(id);
     if (!post) return res.status(404).json({ message: 'Publicación no encontrada' });
     return res.json(post);
@@ -48,6 +75,24 @@ export async function createPost(req, res) {
       filePath = relPath;
     }
 
+    if (IS_DEMO) {
+      const newPost = {
+        _id: `p${Date.now()}`,
+        title,
+        content,
+        image,
+        video,
+        filePath,
+        userId: 'demo-admin',
+        createdAt: new Date().toISOString(),
+        views: 0,
+        likes: 0,
+      };
+      demoPosts.unshift(newPost);
+      try { getIO().emit('posts:created', newPost); } catch {}
+      return res.status(201).json(newPost);
+    }
+
     const post = await Post.create({
       title,
       content,
@@ -58,6 +103,7 @@ export async function createPost(req, res) {
       createdAt: new Date(),
     });
 
+    try { getIO().emit('posts:created', post); } catch {}
     return res.status(201).json(post);
   } catch (err) {
     console.error('createPost error:', err);
@@ -95,8 +141,17 @@ export async function updatePost(req, res) {
       update.filePath = relPath;
     }
 
+    if (IS_DEMO) {
+      const idx = demoPosts.findIndex((p) => String(p._id) === String(id));
+      if (idx === -1) return res.status(404).json({ message: 'Publicación no encontrada' });
+      demoPosts[idx] = { ...demoPosts[idx], ...update };
+      try { getIO().emit('posts:updated', demoPosts[idx]); } catch {}
+      return res.json(demoPosts[idx]);
+    }
+
     const updated = await Post.findByIdAndUpdate(id, update, { new: true });
     if (!updated) return res.status(404).json({ message: 'Publicación no encontrada' });
+    try { getIO().emit('posts:updated', updated); } catch {}
     return res.json(updated);
   } catch (err) {
     console.error('updatePost error:', err);
@@ -112,8 +167,17 @@ export async function deletePost(req, res) {
     }
 
     const { id } = req.params;
+    if (IS_DEMO) {
+      const before = demoPosts.length;
+      demoPosts = demoPosts.filter((p) => String(p._id) !== String(id));
+      if (demoPosts.length === before) return res.status(404).json({ message: 'Publicación no encontrada' });
+      try { getIO().emit('posts:deleted', { id }); } catch {}
+      return res.json({ message: 'Publicación eliminada' });
+    }
+
     const deleted = await Post.findByIdAndDelete(id);
     if (!deleted) return res.status(404).json({ message: 'Publicación no encontrada' });
+    try { getIO().emit('posts:deleted', { id }); } catch {}
     return res.json({ message: 'Publicación eliminada' });
   } catch (err) {
     console.error('deletePost error:', err);
@@ -124,8 +188,16 @@ export async function deletePost(req, res) {
 export async function incrementViews(req, res) {
   try {
     const { id } = req.params;
+    if (IS_DEMO) {
+      const p = demoPosts.find((x) => String(x._id) === String(id));
+      if (!p) return res.status(404).json({ message: 'Publicación no encontrada' });
+      p.views = (p.views || 0) + 1;
+      try { getIO().emit('posts:views', { id: p._id, views: p.views }); } catch {}
+      return res.json({ id: p._id, views: p.views });
+    }
     const updated = await Post.findByIdAndUpdate(id, { $inc: { views: 1 } }, { new: true });
     if (!updated) return res.status(404).json({ message: 'Publicación no encontrada' });
+    try { getIO().emit('posts:views', { id: updated._id, views: updated.views }); } catch {}
     return res.json({ id: updated._id, views: updated.views });
   } catch (err) {
     console.error('incrementViews error:', err);
@@ -136,8 +208,16 @@ export async function incrementViews(req, res) {
 export async function incrementLikes(req, res) {
   try {
     const { id } = req.params;
+    if (IS_DEMO) {
+      const p = demoPosts.find((x) => String(x._id) === String(id));
+      if (!p) return res.status(404).json({ message: 'Publicación no encontrada' });
+      p.likes = (p.likes || 0) + 1;
+      try { getIO().emit('posts:likes', { id: p._id, likes: p.likes }); } catch {}
+      return res.json({ id: p._id, likes: p.likes });
+    }
     const updated = await Post.findByIdAndUpdate(id, { $inc: { likes: 1 } }, { new: true });
     if (!updated) return res.status(404).json({ message: 'Publicación no encontrada' });
+    try { getIO().emit('posts:likes', { id: updated._id, likes: updated.likes }); } catch {}
     return res.json({ id: updated._id, likes: updated.likes });
   } catch (err) {
     console.error('incrementLikes error:', err);
