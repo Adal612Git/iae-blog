@@ -13,6 +13,7 @@ Instalador DEMO para Windows
 - Opción 2 (rápida para pruebas): Enviar el repo en ZIP + script PowerShell.
   - Enviar este repositorio (ZIP) a Windows.
   - En Windows, descomprimir y ejecutar: `scripts/windows/install-demo.ps1 -StartAfterInstall` (clic derecho, Run with PowerShell).
+  - O 1‑click: doble clic en `Run-Windows-Demo.bat` (llama al script anterior automáticamente).
   - Se instalará Node LTS (si falta), las dependencias y arrancará automáticamente.
 
 Modo DEMO
@@ -36,6 +37,25 @@ Despliegue con Docker (producción)
     - Backend (Express): `http://<IP_DEL_SERVIDOR>:5000`
     - MongoDB (interno a la red de Docker)
 - La app frontend está configurada para llamar al backend vía proxy Nginx en la misma URL: el frontend consume `/api` que Nginx redirige a `backend:5000/api` en la red de Docker.
+
+Instalador para Windows (Docker)
+- Compila el instalador: abre NSIS y compila `installer/windows/iae-blog-docker.nsi` (o `makensis installer\windows\iae-blog-docker.nsi`).
+- Ejecuta el `iae-blog-docker-setup.exe` en Windows (Administrador).
+  - Instala Docker Desktop con winget si no está.
+  - Escribe `.env` con `JWT_SECRET` si falta.
+  - Ejecuta `docker compose up -d --build`, corre el seed, y abre `http://localhost:8080`.
+- Accesos directos: crea enlaces para iniciar con Docker.
+
+Alternativa sin compilar (Docker)
+- Doble clic en `Run-Windows-Docker.bat` para verificar/instalar Docker Desktop y levantar el stack con `docker compose` (abre `http://localhost:8080`).
+
+EXE 1‑click con GitHub Actions
+- Ya hay un workflow para compilar los `.exe` automáticamente en Windows.
+- Pasos:
+  - Sube el repo a GitHub.
+  - Ve a Actions y ejecuta manualmente “Build Windows Installers” (o crea un tag `vX.Y.Z` para publicar un Release con los `.exe`).
+  - Descarga los artefactos (`iae-blog-docker-setup.exe` y `iae-blog-demo-setup.exe`).
+  - En la PC destino: doble clic al `.exe` (Administrador) y listo.
 
 Probar instalación en otra PC
 - Desde otra PC en la misma red, abre `http://<IP_DEL_SERVIDOR>:8080`.
