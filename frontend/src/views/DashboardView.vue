@@ -49,6 +49,16 @@
         <q-form @submit.prevent="onCreate" class="q-gutter-md">
           <q-input v-model="form.title" label="Título" outlined dense required />
           <q-input v-model="form.content" label="Contenido" type="textarea" autogrow outlined dense required />
+          <q-select
+            v-model="form.size"
+            :options="sizeOptions"
+            label="Tamaño de la tarjeta"
+            dense
+            outlined
+            emit-value
+            map-options
+            options-dense
+          />
           <q-file v-model="createFile" label="Subir imagen o video" filled dense accept="image/*,video/*" use-chips clear-icon="close" :max-file-size="10485760">
             <template #prepend>
               <q-icon name="upload" />
@@ -70,6 +80,16 @@
           <q-form @submit.prevent="onUpdate" class="q-gutter-md">
             <q-input v-model="editForm.title" label="Título" outlined dense required />
             <q-input v-model="editForm.content" label="Contenido" type="textarea" autogrow outlined dense required />
+            <q-select
+              v-model="editForm.size"
+              :options="sizeOptions"
+              label="Tamaño de la tarjeta"
+              dense
+              outlined
+              emit-value
+              map-options
+              options-dense
+            />
             <q-file v-model="editFile" label="Subir imagen o video (opcional)" filled dense accept="image/*,video/*" use-chips clear-icon="close">
               <template #prepend>
                 <q-icon name="upload" />
@@ -118,7 +138,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue';
 import AutoVideo from '../components/AutoVideo.vue';
-import { usePostStore, type Post } from '../stores/postStore';
+import { usePostStore, type Post, type PostSize } from '../stores/postStore';
 import { likePost } from '../services/api';
 import { useQuasar } from 'quasar';
 import { computeMediaUrl as computeUrl, isImagePath as isImg } from '../utils/media';
@@ -135,6 +155,11 @@ const featuredOptions = [
   { label: '2 destacados', value: 2 },
   { label: '4 destacados', value: 4 },
 ];
+const sizeOptions = [
+  { label: 'Grande', value: 'large' },
+  { label: 'Mediano', value: 'medium' },
+  { label: 'Pequeño', value: 'small' },
+] as const;
 const colorKeys = ['primary', 'secondary', 'accent', 'positive', 'negative', 'info', 'warning'] as const;
 const localSettings = reactive<{ featuredLayout: 1 | 2 | 4; colors: SettingsDto['colors'] }>({
   featuredLayout: settingsStore.featuredLayout,
@@ -191,7 +216,7 @@ async function loadPosts() {
 onMounted(loadPosts);
 
 // Crear
-const form = reactive({ title: '', content: '' });
+const form = reactive<{ title: string; content: string; size: PostSize }>({ title: '', content: '', size: 'medium' });
 const createFile = ref<File | null>(null);
 const loadingCreate = ref(false);
 const errorCreate = ref('');
@@ -202,15 +227,17 @@ async function onCreate() {
   loadingCreate.value = true;
   errorCreate.value = '';
   try {
-    const payload: { title: string; content: string; file?: File | null } = {
+    const payload: { title: string; content: string; size: PostSize; file?: File | null } = {
       title: form.title,
       content: form.content,
+      size: form.size,
       ...(createFile.value ? { file: createFile.value } : {}),
     };
     await postStore.createPost(payload);
     $q.notify({ type: 'positive', message: 'Publicación creada' });
     form.title = '';
     form.content = '';
+    form.size = 'medium';
     createFile.value = null;
   } catch (e: unknown) {
     let msg = 'No se pudo crear el post';
@@ -230,7 +257,7 @@ async function onCreate() {
 
 // Editar
 const editingId = ref<string | number | null>(null);
-const editForm = reactive({ title: '', content: '' });
+const editForm = reactive<{ title: string; content: string; size: PostSize }>({ title: '', content: '', size: 'medium' });
 const editFile = ref<File | null>(null);
 const loadingUpdate = ref(false);
 const errorUpdate = ref('');
@@ -239,6 +266,7 @@ function startEdit(p: Post) {
   editingId.value = (p._id ?? p.id) ?? null;
   editForm.title = p.title || '';
   editForm.content = p.content || '';
+  editForm.size = p.size ?? 'medium';
   editFile.value = null;
 }
 
@@ -246,6 +274,7 @@ function cancelEdit() {
   editingId.value = null;
   editForm.title = '';
   editForm.content = '';
+  editForm.size = 'medium';
   editFile.value = null;
   errorUpdate.value = '';
 }
@@ -255,9 +284,10 @@ async function onUpdate() {
   loadingUpdate.value = true;
   errorUpdate.value = '';
   try {
-    const payload: { title?: string; content?: string; file?: File | null } = {
+    const payload: { title?: string; content?: string; size?: PostSize; file?: File | null } = {
       title: editForm.title,
       content: editForm.content,
+      size: editForm.size,
       ...(editFile.value ? { file: editFile.value } : {}),
     };
     await postStore.updatePost(editingId.value, payload);

@@ -13,6 +13,13 @@ RED="\033[0;31m"; GREEN="\033[0;32m"; YELLOW="\033[1;33m"; NC="\033[0m"
 
 on_error() {
   echo -e "${RED}[ERROR]${NC} Ha ocurrido un error. Revisa el log anterior."
+  if require_cmd docker; then
+    echo -e "${YELLOW}[INFO]${NC} Estado actual de los contenedores (si alguno quedó levantado):"
+    compose ps || true
+    echo -e "${YELLOW}[INFO]${NC} Últimos logs del backend (si existe):"
+    compose logs --tail=50 backend || true
+  fi
+  read -rp "Presiona Enter para cerrar esta ventana..." _ || true
 }
 trap on_error ERR
 
@@ -127,6 +134,11 @@ open_browser() {
   fi
 }
 
+show_status() {
+  echo -e "${YELLOW}[INFO]${NC} Servicios activos:" 
+  compose ps || true
+}
+
 wait_http() {
   local url="$1"; local tries=120; local delay=2
   echo -e "${YELLOW}[INFO]${NC} Esperando a que esté disponible $url ..."
@@ -181,6 +193,8 @@ main() {
 
   echo -e "${GREEN}[OK]${NC} Todo listo. Credenciales de demo (si no cambiaste): admin@iae.com / admin123"
   echo -e "${YELLOW}[INFO]${NC} Para ver logs: 'docker compose logs -f'"
+  show_status
+  read -rp "Presiona Enter para cerrar esta ventana..." _ || true
 }
 
 main "$@"

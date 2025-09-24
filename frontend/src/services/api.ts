@@ -7,6 +7,8 @@ function authHeaders(token?: string) {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+export type PostSize = 'large' | 'medium' | 'small';
+
 export interface LoginResponse {
   token: string;
 }
@@ -22,10 +24,22 @@ export interface PostDto {
   likes?: number;
   image?: string;
   video?: string;
+  size?: PostSize;
 }
 
 export async function login(email: string, password: string): Promise<LoginResponse> {
   const { data } = await api.post<LoginResponse>('/auth/login', { email, password });
+  return data;
+}
+
+export interface RegisterResponse {
+  token?: string;
+  user?: { id: string; email: string; role: string };
+  message?: string;
+}
+
+export async function register(email: string, password: string): Promise<RegisterResponse> {
+  const { data } = await api.post<RegisterResponse>('/auth/register', { email, password });
   return data;
 }
 
@@ -35,20 +49,21 @@ export async function getPosts(): Promise<PostDto[]> {
 }
 
 export async function createPost(
-  data: { title: string; content: string; file?: File },
+  data: { title: string; content: string; size?: PostSize; file?: File },
   token: string
 ): Promise<PostDto> {
   const headers = { ...authHeaders(token) } as Record<string, string>;
 
-  let body: FormData | { title: string; content: string };
+  let body: FormData | { title: string; content: string; size?: PostSize };
   if (data.file) {
     const fd = new FormData();
     fd.append('title', data.title);
     fd.append('content', data.content);
+    if (data.size) fd.append('size', data.size);
     fd.append('file', data.file);
     body = fd; // No seteamos Content-Type manualmente
   } else {
-    body = { title: data.title, content: data.content };
+    body = { title: data.title, content: data.content, ...(data.size ? { size: data.size } : {}) };
     headers['Content-Type'] = 'application/json';
   }
 
@@ -58,22 +73,24 @@ export async function createPost(
 
 export async function updatePost(
   id: string,
-  data: { title?: string; content?: string; file?: File },
+  data: { title?: string; content?: string; size?: PostSize; file?: File },
   token: string
 ): Promise<PostDto> {
   const headers = { ...authHeaders(token) } as Record<string, string>;
 
-  let body: FormData | { title?: string; content?: string };
+  let body: FormData | { title?: string; content?: string; size?: PostSize };
   if (data.file) {
     const fd = new FormData();
     if (data.title != null) fd.append('title', data.title);
     if (data.content != null) fd.append('content', data.content);
+    if (data.size) fd.append('size', data.size);
     fd.append('file', data.file);
     body = fd;
   } else {
     body = {
       ...(data.title != null ? { title: data.title } : {}),
       ...(data.content != null ? { content: data.content } : {}),
+      ...(data.size ? { size: data.size } : {}),
     };
     headers['Content-Type'] = 'application/json';
   }

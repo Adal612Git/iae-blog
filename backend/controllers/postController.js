@@ -2,6 +2,16 @@ import Post from '../models/Post.js';
 import { IS_DEMO } from '../config.js';
 import { getIO } from '../socket.js';
 
+const VALID_SIZES = new Set(['large', 'medium', 'small']);
+
+function normalizeSize(value, fallback = 'medium') {
+  if (typeof value === 'string') {
+    const lower = value.toLowerCase();
+    if (VALID_SIZES.has(lower)) return lower;
+  }
+  return fallback;
+}
+
 // Almacenamiento en memoria para modo demo
 let demoPosts = [
   {
@@ -14,6 +24,7 @@ let demoPosts = [
     createdAt: new Date().toISOString(),
     views: 3,
     likes: 1,
+    size: 'medium',
     userId: 'demo-admin',
   },
 ];
@@ -57,6 +68,7 @@ export async function createPost(req, res) {
     }
 
     const { title, content } = req.body ?? {};
+    const size = normalizeSize(req.body?.size);
     if (!title || !content) {
       return res.status(400).json({ message: 'title y content son requeridos' });
     }
@@ -83,6 +95,7 @@ export async function createPost(req, res) {
         image,
         video,
         filePath,
+        size,
         userId: 'demo-admin',
         createdAt: new Date().toISOString(),
         views: 0,
@@ -99,6 +112,7 @@ export async function createPost(req, res) {
       image,
       video,
       filePath,
+      size,
       userId: currentUser._id,
       createdAt: new Date(),
     });
@@ -120,10 +134,12 @@ export async function updatePost(req, res) {
 
     const { id } = req.params;
     const { title, content } = req.body ?? {};
+    const normalizedSize = normalizeSize(req.body?.size, null);
 
     const update = {};
     if (typeof title === 'string') update.title = title;
     if (typeof content === 'string') update.content = content;
+    if (normalizedSize) update.size = normalizedSize;
 
     const file = req.file;
     if (file) {

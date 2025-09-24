@@ -2,7 +2,6 @@ import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
-import { authenticateJWT } from '../middlewares/authMiddleware.js';
 import { IS_DEMO } from '../config.js';
 
 const router = Router();
@@ -47,17 +46,17 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// POST /api/auth/register (solo admin)
-router.post('/register', authenticateJWT, async (req, res) => {
+// POST /api/auth/register
+router.post('/register', async (req, res) => {
   try {
-    const currentUser = req.user;
-    if (!currentUser || currentUser.role !== 'admin') {
-      return res.status(403).json({ message: 'No autorizado' });
-    }
-
-    const { email, password, role = 'user' } = req.body ?? {};
+    const { email, password } = req.body ?? {};
     if (!email || !password) {
       return res.status(400).json({ message: 'Email y password son requeridos' });
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      return res.status(500).json({ message: 'JWT_SECRET no está definida en el entorno' });
     }
 
     const exists = await User.findOne({ email });
@@ -67,13 +66,18 @@ router.post('/register', authenticateJWT, async (req, res) => {
 
     if (IS_DEMO) {
       // En demo no persistimos usuarios nuevos
-      return res.status(200).json({ message: 'Registro simulado en modo demo' });
+      const token = jwt.sign({ id: 'demo-admin', role: 'admin' }, secret, { expiresIn: '4h' });
+      return res.status(200).json({ token, user: { id: 'demo-admin', email, role: 'admin' }, message: 'Registro simulado en modo demo' });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const created = await User.create({ email, passwordHash, role });
+    const created = await User.create({ email, passwordHash, role: 'admin' });
+    const token = jwt.sign({ id: created._id }, secret, { expiresIn: '1h' });
 
-    return res.status(201).json({ id: created._id, email: created.email, role: created.role });
+    return res.status(201).json({
+      token,
+      user: { id: created._id, email: created.email, role: created.role },
+    });
   } catch (err) {
     console.error('Error en /register:', err);
     return res.status(500).json({ message: 'Error interno' });

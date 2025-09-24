@@ -12,6 +12,7 @@ const PostSchema = new Schema(
     createdAt: { type: Date, required: true, default: Date.now },
     views: { type: Number, required: true, default: 0 },
     likes: { type: Number, required: true, default: 0 },
+    size: { type: String, enum: ['large', 'medium', 'small'], default: 'medium' },
     userId: { type: Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }
