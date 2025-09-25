@@ -102,6 +102,8 @@ export async function createPost(req, res) {
         likes: 0,
       };
       demoPosts.unshift(newPost);
+      const timestamp = new Date().toISOString();
+      console.log(`[${timestamp}] Usuario demo-admin publico ${title}`);
       try { getIO().emit('posts:created', newPost); } catch {}
       return res.status(201).json(newPost);
     }
@@ -116,6 +118,8 @@ export async function createPost(req, res) {
       userId: currentUser._id,
       createdAt: new Date(),
     });
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] Usuario ${currentUser._id} publico ${post.title}`);
 
     try { getIO().emit('posts:created', post); } catch {}
     return res.status(201).json(post);

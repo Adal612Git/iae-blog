@@ -37,6 +37,17 @@ app.use(express.json());
 app.use(passport.initialize());
 initPassport(passport);
 
+// Middleware de logs para requests
+app.use((req, res, next) => {
+  const startedAt = Date.now();
+  res.on('finish', () => {
+    const timestamp = new Date().toISOString();
+    const duration = Date.now() - startedAt;
+    console.log(`[${timestamp}] ${req.method} ${req.originalUrl} -> ${res.statusCode} (${duration}ms)`);
+  });
+  next();
+});
+
 // Ping route
 app.get('/api/ping', (_req, res) => {
   res.json({ message: 'pong' });

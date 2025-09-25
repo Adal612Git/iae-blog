@@ -25,13 +25,12 @@ echo Iniciando instalacion/arranque via PowerShell...
 echo (Se requerira Docker Desktop; el script lo instalara si falta)
 echo ================================
 
-powershell -ExecutionPolicy Bypass -File "%PS_SCRIPT%" -StartAfterInstall
+powershell -NoExit -ExecutionPolicy Bypass -File "%PS_SCRIPT%" -StartAfterInstall -KeepWindowOpen -FollowLogs
 if errorlevel 1 (
   echo.
   echo Hubo un problema con PowerShell.
   echo Puedes ejecutar manualmente: %PS_SCRIPT% -StartAfterInstall
   echo (Clic derecho, "Run with PowerShell").
-  pause
 )
 
 popd >nul

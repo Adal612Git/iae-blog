@@ -25,6 +25,8 @@ router.post('/login', async (req, res) => {
         return res.status(401).json({ message: 'Credenciales inválidas (demo: admin@iae.com / admin123)' });
       }
       const token = jwt.sign({ id: 'demo-admin', role: 'admin' }, secret, { expiresIn: '4h' });
+      const timestamp = new Date().toISOString();
+      console.log(`[${timestamp}] Usuario demo ${email} inicio sesion`);
       return res.json({ token });
     }
 
@@ -39,6 +41,8 @@ router.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign({ id: user._id }, secret, { expiresIn: '1h' });
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] Usuario ${user._id} (${email}) inicio sesion`);
     return res.json({ token });
   } catch (err) {
     console.error('Error en /login:', err);
@@ -67,12 +71,16 @@ router.post('/register', async (req, res) => {
     if (IS_DEMO) {
       // En demo no persistimos usuarios nuevos
       const token = jwt.sign({ id: 'demo-admin', role: 'admin' }, secret, { expiresIn: '4h' });
+      const timestamp = new Date().toISOString();
+      console.log(`[${timestamp}] Usuario demo ${email} se registro`);
       return res.status(200).json({ token, user: { id: 'demo-admin', email, role: 'admin' }, message: 'Registro simulado en modo demo' });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
     const created = await User.create({ email, passwordHash, role: 'admin' });
     const token = jwt.sign({ id: created._id }, secret, { expiresIn: '1h' });
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] Usuario ${created._id} (${email}) se registro`);
 
     return res.status(201).json({
       token,
