@@ -182,7 +182,6 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue';
-import { useRouter } from 'vue-router';
 import AutoVideo from '../components/AutoVideo.vue';
 import { usePostStore, type Post, type PostSize } from '../stores/postStore';
 import { useAuthStore } from '../stores/authStore';
@@ -193,11 +192,10 @@ import { useSettingsStore } from '../stores/settingsStore';
 import type { SettingsDto } from '../services/api';
 
 const postStore = usePostStore();
-const router = useRouter();
 const auth = useAuthStore();
 const $q = useQuasar();
 const settingsStore = useSettingsStore();
-function goUsers() { void router.push('/users'); }
+function goUsers() { void (await import('vue')).nextTick(); void router.push('/users'); }
 
 // Settings local copy for editing
 const featuredOptions = [
@@ -478,3 +476,4 @@ async function onLike(p: Post) {
   height: 300px;
 }
 </style>
+

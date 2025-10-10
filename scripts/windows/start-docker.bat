@@ -27,10 +27,19 @@ if errorlevel 1 (
   exit /b 1
 )
 
-REM .env con JWT_SECRET si falta
+REM Asegurar .env con claves por defecto
 if not exist ".env" (
   > ".env" echo JWT_SECRET=supersecreto_cambia_esto
+  >> ".env" echo ADMIN_MASTER_KEY=CambiaEstaClaveMaestra
   echo [INFO] Escrito .env por defecto.
+)
+
+REM Si falta alguna key en .env existente, agregarla
+findstr /r /c:"^JWT_SECRET=" .env >nul 2>&1 || (
+  echo JWT_SECRET=supersecreto_cambia_esto>>.env & echo [INFO] Agregado JWT_SECRET a .env
+)
+findstr /r /c:"^ADMIN_MASTER_KEY=" .env >nul 2>&1 || (
+  echo ADMIN_MASTER_KEY=CambiaEstaClaveMaestra>>.env & echo [INFO] Agregado ADMIN_MASTER_KEY a .env
 )
 
 echo [INFO] Construyendo y levantando contenedores...
@@ -41,8 +50,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo [INFO] Ejecutando seed de admin/posts...
-docker compose exec -T backend node seed.js || echo [WARN] Seed fallo; continuando...
+echo [INFO] Seed desactivado. Usa la pestaña "Crear admin" en /#/login con tu ADMIN_MASTER_KEY.
 
 echo [INFO] Abriendo http://localhost:8080
 start "" http://localhost:8080

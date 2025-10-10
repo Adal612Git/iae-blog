@@ -19,9 +19,11 @@ const SettingsSchema = new Schema(
   {
     featuredLayout: { type: Number, enum: [1, 2, 4], default: 2 },
     colors: { type: ColorsSchema, default: () => ({}) },
+    infoText: { type: String, default: '' },
+    logoUrl: { type: String, default: '' },
+    backgroundUrl: { type: String, default: '' },
   },
   { timestamps: true }
 );
 
 export default model('Settings', SettingsSchema);
-

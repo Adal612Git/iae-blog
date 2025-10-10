@@ -20,6 +20,7 @@ services:
       - NODE_ENV=production
       - DEMO_MODE=false
       - JWT_SECRET=${JWT_SECRET:-supersecreto_cambia_esto}
+      - ADMIN_MASTER_KEY=${ADMIN_MASTER_KEY:-CambiaEstaClaveMaestra}
       - DB_URL=mongodb://mongo:27017/iae_blog
       - UPLOAD_MAX_MB=100
     ports:

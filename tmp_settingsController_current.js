@@ -13,9 +13,6 @@ const DEFAULTS = Object.freeze({
     info: '#31ccec',
     warning: '#f2c037',
   },
-  infoText: '',
-  logoUrl: '',
-  backgroundUrl: '',
 });
 
 let demoSettings = { ...DEFAULTS };
@@ -29,15 +26,12 @@ function sanitize(input = {}) {
   if (input.colors && typeof input.colors === 'object') {
     const c = input.colors;
     out.colors = {};
-    for (const k of ['primary', 'secondary', 'accent']) {
+    for (const k of ['primary', 'secondary', 'accent', 'positive', 'negative', 'info', 'warning']) {
       if (typeof c[k] === 'string' && c[k].trim()) {
         out.colors[k] = c[k].trim();
       }
     }
     if (Object.keys(out.colors).length === 0) delete out.colors;
-  }
-  if (typeof input.infoText === 'string') {
-    out.infoText = input.infoText.trim();
   }
   return out;
 }
@@ -55,9 +49,6 @@ export async function getSettings(_req, res) {
     return res.json({
       featuredLayout: doc.featuredLayout ?? DEFAULTS.featuredLayout,
       colors: { ...DEFAULTS.colors, ...(doc.colors || {}) },
-      infoText: typeof doc.infoText === 'string' ? doc.infoText : DEFAULTS.infoText,
-      logoUrl: typeof doc.logoUrl === 'string' ? doc.logoUrl : DEFAULTS.logoUrl,
-      backgroundUrl: typeof doc.backgroundUrl === 'string' ? doc.backgroundUrl : DEFAULTS.backgroundUrl,
     });
   } catch (err) {
     console.error('getSettings error:', err);
@@ -100,61 +91,4 @@ export async function updateSettings(req, res) {
   }
 }
 
-export async function uploadLogo(req, res) {
-  try {
-    const user = req.user;
-    if (!user || user.role !== 'admin') {
-      return res.status(403).json({ message: 'No autorizado' });
-    }
-    const file = req.file;
-    if (!file) {
-      return res.status(400).json({ message: 'Archivo requerido' });
-    }
-    const isImage = (file.mimetype || '').toLowerCase().startsWith('image');
-    if (!isImage) {
-      return res.status(400).json({ message: 'Debe subir una imagen' });
-    }
-    const relPath = `/uploads/${file.filename}`;
-    if (IS_DEMO) {
-      demoSettings = { ...demoSettings, logoUrl: relPath };
-      return res.json(demoSettings);
-    }
-    const settings = (await Settings.findOne({})) || (await Settings.create({ ...DEFAULTS }));
-    settings.logoUrl = relPath;
-    const saved = await settings.save();
-    return res.json(saved);
-  } catch (err) {
-    console.error('uploadLogo error:', err);
-    return res.status(500).json({ message: 'Error al subir logo' });
-  }
-}
-
-export async function uploadBackground(req, res) {
-  try {
-    const user = req.user;
-    if (!user || user.role !== 'admin') {
-      return res.status(403).json({ message: 'No autorizado' });
-    }
-    const file = req.file;
-    if (!file) {
-      return res.status(400).json({ message: 'Archivo requerido' });
-    }
-    const isImage = (file.mimetype || '').toLowerCase().startsWith('image');
-    if (!isImage) {
-      return res.status(400).json({ message: 'Debe subir una imagen' });
-    }
-    const relPath = `/uploads/${file.filename}`;
-    if (IS_DEMO) {
-      demoSettings = { ...demoSettings, backgroundUrl: relPath };
-      return res.json(demoSettings);
-    }
-    const settings = (await Settings.findOne({})) || (await Settings.create({ ...DEFAULTS }));
-    settings.backgroundUrl = relPath;
-    const saved = await settings.save();
-    return res.json(saved);
-  } catch (err) {
-    console.error('uploadBackground error:', err);
-    return res.status(500).json({ message: 'Error al subir fondo' });
-  }
-}
 

@@ -9,6 +9,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'info', name: 'info', component: () => import('src/views/InfoView.vue') },
       { path: 'login', name: 'login', component: () => import('src/views/LoginView.vue') },
       { path: 'dashboard', name: 'dashboard', meta: { requiresAuth: true }, component: () => import('src/views/DashboardView.vue') },
+      { path: 'users', name: 'users', meta: { requiresAuth: true }, component: () => import('src/views/UsersView.vue') },
       { path: 'posts/:id', name: 'post', component: () => import('src/views/PostDetailView.vue') },
     ],
   },

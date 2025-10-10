@@ -37,28 +37,16 @@
         <q-item-section>Info</q-item-section>
       </q-item>
 
-      <q-item
-        v-if="!isAuth"
-        clickable
-        v-ripple
-        to="/login"
-        active-class="app-sidebar__item--active"
-        @click="closeOnMobile"
-      >
-        <q-item-section avatar><q-icon name="login" /></q-item-section>
-        <q-item-section>Login</q-item-section>
-      </q-item>
+      <!-- Login oculto al público: no se muestra enlace -->
 
-      <q-item
-        v-else
-        clickable
-        v-ripple
-        to="/dashboard"
-        active-class="app-sidebar__item--active"
-        @click="closeOnMobile"
-      >
+      <q-item v-if="isAuth" clickable v-ripple to="/dashboard" active-class="app-sidebar__item--active" @click="closeOnMobile">
         <q-item-section avatar><q-icon name="dashboard" /></q-item-section>
         <q-item-section>Dashboard</q-item-section>
+      </q-item>
+
+      <q-item v-if="isAuth" clickable v-ripple to="/users" active-class="app-sidebar__item--active" @click="closeOnMobile">
+        <q-item-section avatar><q-icon name="group_add" /></q-item-section>
+        <q-item-section>Usuarios</q-item-section>
       </q-item>
     </q-list>
 

@@ -12,43 +12,6 @@ function normalizeSize(value, fallback = 'medium') {
   return fallback;
 }
 
-function toBoolean(value, fallback = false) {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'string') {
-    const v = value.trim().toLowerCase();
-    if (['1', 'true', 'yes', 'on'].includes(v)) return true;
-    if (['0', 'false', 'no', 'off'].includes(v)) return false;
-  }
-  return fallback;
-}
-
-function toDate(value) {
-  if (value == null || value === '') return undefined;
-  try {
-    const d = new Date(value);
-    if (isNaN(d.getTime())) return undefined;
-    return d;
-  } catch {
-    return undefined;
-  }
-}
-
-function getClientIp(req) {
-  try {
-    const xf = (req.headers['x-forwarded-for'] || '').toString();
-    if (xf) {
-      const first = xf.split(',')[0].trim();
-      if (first) return first;
-    }
-    const cip = (req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] || '').toString();
-    if (cip) return cip;
-    const ra = (req.socket && req.socket.remoteAddress) || req.ip;
-    return typeof ra === 'string' ? ra : '';
-  } catch {
-    return '';
-  }
-}
-
 // Almacenamiento en memoria para modo demo
 let demoPosts = [
   {
@@ -59,8 +22,6 @@ let demoPosts = [
     image: undefined,
     video: undefined,
     createdAt: new Date().toISOString(),
-    urgent: false,
-    expiresAt: undefined,
     views: 3,
     likes: 1,
     likedBy: ['demo-admin'],
@@ -72,25 +33,10 @@ let demoPosts = [
 export async function getPosts(_req, res) {
   try {
     if (IS_DEMO) {
-      const now = Date.now();
-      const filtered = demoPosts.filter((p) => !p.expiresAt || new Date(p.expiresAt).getTime() > now);
-      const sorted = [...filtered].sort((a, b) => {
-        const ua = a.urgent ? 1 : 0;
-        const ub = b.urgent ? 1 : 0;
-        if (ua !== ub) return ub - ua; // urgentes primero
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      });
-      // No exponer likedIps en API
-      const sanitized = sorted.map(({ likedIps, ...rest }) => rest);
-      return res.json(sanitized);
+      const sorted = [...demoPosts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      return res.json(sorted);
     }
-    const posts = await Post.find({
-      $or: [
-        { expiresAt: null },
-        { expiresAt: { $exists: false } },
-        { expiresAt: { $gt: new Date() } },
-      ],
-    }).select('-likedIps').sort({ urgent: -1, createdAt: -1 });
+    const posts = await Post.find({}).sort({ createdAt: -1 });
     return res.json(posts);
   } catch (err) {
     console.error('getPosts error:', err);
@@ -104,10 +50,9 @@ export async function getPostById(req, res) {
     if (IS_DEMO) {
       const post = demoPosts.find((p) => String(p._id) === String(id));
       if (!post) return res.status(404).json({ message: 'Publicación no encontrada' });
-      const { likedIps, ...rest } = post;
-      return res.json(rest);
+      return res.json(post);
     }
-    const post = await Post.findById(id).select('-likedIps');
+    const post = await Post.findById(id);
     if (!post) return res.status(404).json({ message: 'Publicación no encontrada' });
     return res.json(post);
   } catch (err) {
@@ -152,8 +97,6 @@ export async function createPost(req, res) {
         video,
         filePath,
         size,
-        urgent: toBoolean(req.body?.urgent, false),
-        expiresAt: toDate(req.body?.expiresAt)?.toISOString(),
         userId: 'demo-admin',
         createdAt: new Date().toISOString(),
         views: 0,
@@ -162,7 +105,7 @@ export async function createPost(req, res) {
       };
       demoPosts.unshift(newPost);
       const timestamp = new Date().toISOString();
-      console.log(`[${timestamp}] Usuario demo-admin publicó ${title}`);
+      console.log(`[${timestamp}] Usuario demo-admin publico ${title}`);
       try { getIO().emit('posts:created', newPost); } catch {}
       return res.status(201).json(newPost);
     }
@@ -174,14 +117,12 @@ export async function createPost(req, res) {
       video,
       filePath,
       size,
-      urgent: toBoolean(req.body?.urgent, false),
-      expiresAt: toDate(req.body?.expiresAt),
       userId: currentUser._id,
       createdAt: new Date(),
       likedBy: [],
     });
     const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] Usuario ${currentUser._id} publicó ${post.title}`);
+    console.log(`[${timestamp}] Usuario ${currentUser._id} publico ${post.title}`);
 
     try { getIO().emit('posts:created', post); } catch {}
     return res.status(201).json(post);
@@ -206,8 +147,6 @@ export async function updatePost(req, res) {
     if (typeof title === 'string') update.title = title;
     if (typeof content === 'string') update.content = content;
     if (normalizedSize) update.size = normalizedSize;
-    if ('urgent' in (req.body || {})) update.urgent = toBoolean(req.body?.urgent);
-    if ('expiresAt' in (req.body || {})) update.expiresAt = toDate(req.body?.expiresAt);
 
     const file = req.file;
     if (file) {
@@ -343,44 +282,50 @@ export async function incrementLikes(req, res) {
 // Variante con actualización atómica para garantizar 1 like por usuario
 export async function incrementLikesOnce(req, res) {
   try {
-    const { id } = req.params;
-    const ip = getClientIp(req);
-    if (!ip) {
-      return res.status(400).json({ message: 'No se pudo determinar IP del cliente' });
+    const currentUser = req.user;
+    if (!currentUser || !currentUser._id) {
+      return res.status(401).json({ message: 'Debes iniciar sesión para dar like' });
     }
+    const { id } = req.params;
+    const userId = String(currentUser._id);
 
     if (IS_DEMO) {
       const p = demoPosts.find((x) => String(x._id) === String(id));
       if (!p) return res.status(404).json({ message: 'Publicación no encontrada' });
-      if (!Array.isArray(p.likedIps)) { p.likedIps = []; }
-      if (p.likedIps.includes(ip)) {
-        return res.status(409).json({ message: 'Ya registraste un like a esta publicación' });
+      if (!Array.isArray(p.likedBy)) { p.likedBy = []; }
+      if (p.likedBy.some((entry) => String(entry) === userId)) {
+        return res.status(409).json({ message: 'Ya le diste like a esta publicación' });
       }
-      p.likedIps.push(ip);
-      p.likes = p.likedIps.length;
-      const payload = { id: p._id, likes: p.likes };
+      p.likedBy.push(userId);
+      p.likes = p.likedBy.length;
+      const payload = { id: p._id, likes: p.likes, likedBy: [...p.likedBy] };
       try { getIO().emit('posts:likes', payload); } catch {}
       return res.json(payload);
     }
 
-    // Producción: 1 like por IP
-    // Intentar actualizar atomícamente si aún no contiene la IP
+    // Producción: usar $setUnion + $size para atomicidad y unicidad
+    const alreadyLiked = await Post.exists({ _id: id, likedBy: currentUser._id });
+    if (alreadyLiked) {
+      return res.status(409).json({ message: 'Ya le diste like a esta publicación' });
+    }
+
     const post = await Post.findOneAndUpdate(
-      { _id: id, likedIps: { $ne: ip } },
+      { _id: id },
       [
-        { $set: { likedIps: { $setUnion: ['$likedIps', [ip]] } } },
-        { $set: { likes: { $size: '$likedIps' } } },
+        { $set: { likedBy: { $setUnion: ['$likedBy', [currentUser._id]] } } },
+        { $set: { likes: { $size: '$likedBy' } } },
       ],
       { new: true }
     );
     if (!post) {
-      // Diferenciar entre ya-liked (409) y no existe (404)
-      const exists = await Post.exists({ _id: id });
-      if (!exists) return res.status(404).json({ message: 'Publicación no encontrada' });
-      return res.status(409).json({ message: 'Ya registraste un like a esta publicación' });
+      return res.status(404).json({ message: 'Publicación no encontrada' });
     }
 
-    const responsePayload = { id: post._id, likes: post.likes || 0 };
+    const responsePayload = {
+      id: post._id,
+      likes: post.likes || 0,
+      likedBy: Array.isArray(post.likedBy) ? post.likedBy.map((e) => String(e)) : [],
+    };
     try { getIO().emit('posts:likes', responsePayload); } catch {}
     return res.json(responsePayload);
   } catch (err) {
@@ -388,3 +333,4 @@ export async function incrementLikesOnce(req, res) {
     return res.status(500).json({ message: 'Error al incrementar likes' });
   }
 }
+

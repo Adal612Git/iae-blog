@@ -6,16 +6,29 @@
       </q-card-section>
       <q-tabs v-model="mode" class="text-primary" dense inline-label align="justify">
         <q-tab name="login" label="Ingresar" icon="login" />
-        <q-tab v-if="!hasAdmin" name="register" label="Crear admin" icon="person_add" />
+        <q-tab name="register" label="Registrar" icon="person_add" />
       </q-tabs>
       <q-separator />
       <q-card-section>
         <q-form @submit.prevent="onSubmit" class="q-gutter-md">
           <q-input v-model="email" type="email" label="Email" required autocomplete="email" />
           <q-input v-model="password" type="password" :label="mode === 'login' ? 'Password' : 'Password (mínimo 6 caracteres)'" required :autocomplete="mode === 'login' ? 'current-password' : 'new-password'" />
-          <q-input v-if="mode === 'register'" v-model="confirmPassword" type="password" label="Confirmar password" required autocomplete="new-password" />
-          <q-input v-if="mode === 'register'" v-model="masterKey" type="password" label="Clave maestra (solo inicial)" required autocomplete="off" />
-          <q-btn type="submit" color="primary" :loading="loading" :label="mode === 'login' ? 'Login' : 'Registrar'" unelevated class="full-width" />
+          <q-input
+            v-if="mode === 'register'"
+            v-model="confirmPassword"
+            type="password"
+            label="Confirmar password"
+            required
+            autocomplete="new-password"
+          />
+          <q-btn
+            type="submit"
+            color="primary"
+            :loading="loading"
+            :label="mode === 'login' ? 'Login' : 'Registrar'"
+            unelevated
+            class="full-width"
+          />
           <q-banner v-if="success" class="bg-green-2 text-green-10" dense>{{ success }}</q-banner>
           <q-banner v-if="error" class="bg-red-2 text-red-10" dense>{{ error }}</q-banner>
         </q-form>
@@ -25,10 +38,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/authStore';
-import { bootstrapAdmin, getAuthStatus } from '../services/api';
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -38,21 +50,13 @@ const loading = ref(false);
 const error = ref('');
 const success = ref('');
 const confirmPassword = ref('');
-const masterKey = ref('');
 const mode = ref<'login' | 'register'>('login');
-const hasAdmin = ref(true);
-
-onMounted(async () => {
-  try { hasAdmin.value = (await getAuthStatus()).hasAdmin; } catch { hasAdmin.value = true; }
-  if (hasAdmin.value) mode.value = 'login';
-});
 
 watch(mode, () => {
   error.value = '';
   success.value = '';
   password.value = '';
   confirmPassword.value = '';
-  masterKey.value = '';
 });
 
 async function onSubmit() {
@@ -76,21 +80,12 @@ async function onSubmit() {
         error.value = 'Las contraseñas no coinciden';
         return;
       }
-      if (!masterKey.value) {
-        error.value = 'Ingresa la clave maestra';
-        return;
-      }
-      const res = await bootstrapAdmin(email.value, password.value, masterKey.value);
-      if (res?.token) {
-        auth.token = res.token;
-        if (typeof window !== 'undefined' && window.localStorage) {
-          window.localStorage.setItem('auth_token', res.token);
-        }
-        auth.user = { id: String(res.user?.id || ''), role: 'admin' };
-        success.value = 'Administrador creado';
+      await auth.register(email.value, password.value);
+      if (auth.token) {
+        success.value = 'Cuenta creada correctamente';
         await router.push('/dashboard');
       } else {
-        error.value = 'No se pudo crear el administrador';
+        error.value = auth.error || 'No se pudo registrar la cuenta';
       }
     }
   } catch (e: unknown) {
@@ -103,5 +98,8 @@ async function onSubmit() {
 </script>
 
 <style scoped>
-.full-width { width: 100%; }
+.full-width {
+  width: 100%;
+}
 </style>
+

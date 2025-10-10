@@ -12,6 +12,7 @@ router.post('/', authenticateJWT, requireAdmin, upload, createPost);
 router.put('/:id', authenticateJWT, requireAdmin, upload, updatePost);
 router.delete('/:id', authenticateJWT, requireAdmin, deletePost);
 router.post('/:id/view', incrementViews);
-router.post('/:id/like', authenticateJWT, incrementLikesOnce);
+// Like por IP (público) limitado a 1 por IP
+router.post('/:id/like', incrementLikesOnce);
 
 export default router;

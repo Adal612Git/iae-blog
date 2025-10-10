@@ -8,6 +8,8 @@ export interface Post {
   title: string;
   content: string;
   createdAt?: string;
+  urgent?: boolean;
+  expiresAt?: string;
   views?: number;
   likes?: number;
   likedBy?: string[];
@@ -47,13 +49,15 @@ export const usePostStore = defineStore('posts', {
         this.loading = false;
       }
     },
-    async createPost(payload: { title: string; content: string; size?: PostSize; file?: File | null }) {
+    async createPost(payload: { title: string; content: string; size?: PostSize; urgent?: boolean; expiresAt?: string; file?: File | null }) {
       const token = useAuthStore().token;
       const res = await apiCreate(
         {
           title: payload.title,
           content: payload.content,
           ...(payload.size ? { size: payload.size } : {}),
+          ...(typeof payload.urgent === 'boolean' ? { urgent: payload.urgent } : {}),
+          ...(payload.expiresAt ? { expiresAt: payload.expiresAt } : {}),
           ...(payload.file ? { file: payload.file } : {}),
         },
         token
@@ -61,7 +65,7 @@ export const usePostStore = defineStore('posts', {
       await this.fetchPosts();
       return res;
     },
-    async updatePost(id: string | number, payload: { title?: string; content?: string; size?: PostSize; file?: File | null }) {
+    async updatePost(id: string | number, payload: { title?: string; content?: string; size?: PostSize; urgent?: boolean; expiresAt?: string; file?: File | null }) {
       const token = useAuthStore().token;
       const res = await apiUpdate(
         String(id),
@@ -69,6 +73,8 @@ export const usePostStore = defineStore('posts', {
           ...(payload.title != null ? { title: payload.title } : {}),
           ...(payload.content != null ? { content: payload.content } : {}),
           ...(payload.size ? { size: payload.size } : {}),
+          ...(typeof payload.urgent === 'boolean' ? { urgent: payload.urgent } : {}),
+          ...(payload.expiresAt ? { expiresAt: payload.expiresAt } : {}),
           ...(payload.file ? { file: payload.file } : {}),
         },
         token

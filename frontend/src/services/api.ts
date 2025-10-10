@@ -20,6 +20,8 @@ export interface PostDto {
   content: string;
   filePath?: string;
   createdAt?: string;
+  urgent?: boolean;
+  expiresAt?: string;
   views?: number;
   likes?: number;
   likedBy?: string[];
@@ -44,27 +46,46 @@ export async function register(email: string, password: string): Promise<Registe
   return data;
 }
 
+// Admin: crear usuario (requiere token de admin)
+export async function adminCreateUser(
+  email: string,
+  password: string,
+  token: string
+): Promise<{ user?: { id: string; email: string; role: string }; message?: string }> {
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const { data } = await api.post('/auth/register', { email, password }, { headers });
+  return data as { user?: { id: string; email: string; role: string }; message?: string };
+}
+
 export async function getPosts(): Promise<PostDto[]> {
   const { data } = await api.get<PostDto[]>('/posts');
   return data;
 }
 
 export async function createPost(
-  data: { title: string; content: string; size?: PostSize; file?: File },
+  data: { title: string; content: string; size?: PostSize; urgent?: boolean; expiresAt?: string; file?: File },
   token: string
 ): Promise<PostDto> {
   const headers = { ...authHeaders(token) } as Record<string, string>;
 
-  let body: FormData | { title: string; content: string; size?: PostSize };
+  let body: FormData | { title: string; content: string; size?: PostSize; urgent?: boolean; expiresAt?: string };
   if (data.file) {
     const fd = new FormData();
     fd.append('title', data.title);
     fd.append('content', data.content);
     if (data.size) fd.append('size', data.size);
+    if (typeof data.urgent === 'boolean') fd.append('urgent', String(data.urgent));
+    if (data.expiresAt) fd.append('expiresAt', data.expiresAt);
     fd.append('file', data.file);
     body = fd; // No seteamos Content-Type manualmente
   } else {
-    body = { title: data.title, content: data.content, ...(data.size ? { size: data.size } : {}) };
+    body = {
+      title: data.title,
+      content: data.content,
+      ...(data.size ? { size: data.size } : {}),
+      ...(typeof data.urgent === 'boolean' ? { urgent: data.urgent } : {}),
+      ...(data.expiresAt ? { expiresAt: data.expiresAt } : {}),
+    };
     headers['Content-Type'] = 'application/json';
   }
 
@@ -74,17 +95,19 @@ export async function createPost(
 
 export async function updatePost(
   id: string,
-  data: { title?: string; content?: string; size?: PostSize; file?: File },
+  data: { title?: string; content?: string; size?: PostSize; urgent?: boolean; expiresAt?: string; file?: File },
   token: string
 ): Promise<PostDto> {
   const headers = { ...authHeaders(token) } as Record<string, string>;
 
-  let body: FormData | { title?: string; content?: string; size?: PostSize };
+  let body: FormData | { title?: string; content?: string; size?: PostSize; urgent?: boolean; expiresAt?: string };
   if (data.file) {
     const fd = new FormData();
     if (data.title != null) fd.append('title', data.title);
     if (data.content != null) fd.append('content', data.content);
     if (data.size) fd.append('size', data.size);
+    if (typeof data.urgent === 'boolean') fd.append('urgent', String(data.urgent));
+    if (data.expiresAt) fd.append('expiresAt', data.expiresAt);
     fd.append('file', data.file);
     body = fd;
   } else {
@@ -92,6 +115,8 @@ export async function updatePost(
       ...(data.title != null ? { title: data.title } : {}),
       ...(data.content != null ? { content: data.content } : {}),
       ...(data.size ? { size: data.size } : {}),
+      ...(typeof data.urgent === 'boolean' ? { urgent: data.urgent } : {}),
+      ...(data.expiresAt ? { expiresAt: data.expiresAt } : {}),
     };
     headers['Content-Type'] = 'application/json';
   }
@@ -135,11 +160,10 @@ export interface SettingsDto {
     primary: string;
     secondary: string;
     accent: string;
-    positive: string;
-    negative: string;
-    info: string;
-    warning: string;
   };
+  infoText?: string;
+  logoUrl?: string;
+  backgroundUrl?: string;
 }
 
 export async function getSettings(): Promise<SettingsDto> {
@@ -150,5 +174,33 @@ export async function getSettings(): Promise<SettingsDto> {
 export async function updateSettingsApi(payload: Partial<SettingsDto>, token: string): Promise<SettingsDto> {
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const { data } = await api.put<SettingsDto>('/settings', payload, { headers });
+  return data;
+}
+
+// Auth helpers
+export async function getAuthStatus(): Promise<{ hasAdmin: boolean }> {
+  const { data } = await api.get<{ hasAdmin: boolean }>('/auth/status');
+  return data;
+}
+
+export async function bootstrapAdmin(email: string, password: string, masterKey: string): Promise<{ token: string; user: { id: string; email: string; role: string } }> {
+  const { data } = await api.post('/auth/bootstrap', { email, password, masterKey });
+  return data as { token: string; user: { id: string; email: string; role: string } };
+}
+
+// Media uploads for settings
+export async function uploadLogo(file: File, token: string): Promise<SettingsDto> {
+  const fd = new FormData();
+  fd.append('file', file);
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const { data } = await api.put<SettingsDto>('/settings/logo', fd, { headers });
+  return data;
+}
+
+export async function uploadBackground(file: File, token: string): Promise<SettingsDto> {
+  const fd = new FormData();
+  fd.append('file', file);
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const { data } = await api.put<SettingsDto>('/settings/background', fd, { headers });
   return data;
 }

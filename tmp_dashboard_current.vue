@@ -1,9 +1,6 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="row items-center q-col-gutter-sm q-mb-md">
-      <div class="col"><div class="text-h5">Dashboard</div></div>
-      <div class="col-auto"><q-btn icon="group_add" label="Crear usuario" color="primary" flat @click="goUsers" /></div>
-    </div>
+    <div class="text-h5 q-mb-md">Dashboard</div>
 
     <!-- Configuración -->
     <q-card class="q-mb-lg shadow-2 rounded-borders" bordered>
@@ -23,7 +20,7 @@
             />
           </div>
           <div class="col-12 col-md-6">
-            <q-expansion-item icon="palette" label="Colores de marca (simplificados)" dense expand-separator>
+            <q-expansion-item icon="palette" label="Colores de marca" dense expand-separator>
               <div class="q-mt-sm">
                 <div class="row q-col-gutter-sm">
                   <div v-for="key in colorKeys" :key="key" class="col-6 col-md-4 q-mb-sm">
@@ -43,32 +40,6 @@
       </q-card-section>
     </q-card>
 
-    <!-- Identidad visual: Logo y Fondo -->
-    <q-card class="q-mb-lg shadow-2 rounded-borders" bordered>
-      <q-card-section>
-        <div class="text-h6">Identidad visual</div>
-        <div class="text-caption text-grey-7">Sube el logo del menú y el fondo del sitio</div>
-      </q-card-section>
-      <q-separator />
-      <q-card-section>
-        <div class="row q-col-gutter-md">
-          <div class="col-12 col-md-6">
-            <q-file v-model="logoFile" label="Subir logo (imagen)" filled dense accept="image/*" use-chips clear-icon="close">
-              <template #prepend><q-icon name="image" /></template>
-            </q-file>
-            <q-btn :loading="savingLogo" :disable="!logoFile" color="primary" class="q-mt-sm" unelevated rounded label="Guardar logo" @click="saveLogo" />
-          </div>
-          <div class="col-12 col-md-6">
-            <q-file v-model="bgFile" label="Subir fondo (imagen)" filled dense accept="image/*" use-chips clear-icon="close">
-              <template #prepend><q-icon name="wallpaper" /></template>
-            </q-file>
-            <q-btn :loading="savingBg" :disable="!bgFile" color="primary" class="q-mt-sm" unelevated rounded label="Guardar fondo" @click="saveBackground" />
-          </div>
-        </div>
-        <q-banner v-if="errorUpload" class="bg-red-2 text-red-10 q-mt-sm" dense>{{ errorUpload }}</q-banner>
-      </q-card-section>
-    </q-card>
-
     <q-card class="q-mb-lg shadow-2 rounded-borders" bordered>
       <q-card-section>
         <div class="text-h6">Crear publicación</div>
@@ -82,16 +53,12 @@
             v-model="form.size"
             :options="sizeOptions"
             label="Tamaño de la tarjeta"
-            dense outlined emit-value map-options options-dense
+            dense
+            outlined
+            emit-value
+            map-options
+            options-dense
           />
-          <div class="row q-col-gutter-sm">
-            <div class="col-12 col-sm-6">
-              <q-toggle v-model="form.urgent" label="Marcar como urgente (fijar al inicio)" />
-            </div>
-            <div class="col-12 col-sm-6">
-              <q-input v-model="form.expiresAt" type="date" label="Fecha de caducidad (opcional)" dense outlined />
-            </div>
-          </div>
           <q-file v-model="createFile" label="Subir imagen o video" filled dense accept="image/*,video/*" use-chips clear-icon="close" :max-file-size="10485760">
             <template #prepend>
               <q-icon name="upload" />
@@ -117,16 +84,12 @@
               v-model="editForm.size"
               :options="sizeOptions"
               label="Tamaño de la tarjeta"
-              dense outlined emit-value map-options options-dense
+              dense
+              outlined
+              emit-value
+              map-options
+              options-dense
             />
-            <div class="row q-col-gutter-sm">
-              <div class="col-12 col-sm-6">
-                <q-toggle v-model="editForm.urgent" label="Urgente" />
-              </div>
-              <div class="col-12 col-sm-6">
-                <q-input v-model="editForm.expiresAt" type="date" label="Fecha de caducidad" dense outlined />
-              </div>
-            </div>
             <q-file v-model="editFile" label="Subir imagen o video (opcional)" filled dense accept="image/*,video/*" use-chips clear-icon="close">
               <template #prepend>
                 <q-icon name="upload" />
@@ -142,31 +105,33 @@
 
         <template v-else>
           <q-card-section>
-            <div class="row items-center q-col-gutter-sm">
-              <div class="col">
-                <div class="text-h6">{{ p.title }}</div>
-              </div>
-              <div class="col-auto" v-if="p.urgent">
-                <q-badge color="negative" outline>URGENTE</q-badge>
-              </div>
-            </div>
+            <div class="text-h6">{{ p.title }}</div>
             <div class="text-body2 q-mt-sm">{{ p.content }}</div>
-            <div class="q-mt-sm text-caption text-grey-7" v-if="p.expiresAt">Vence: {{ String(p.expiresAt).slice(0,10) }}</div>
-            <div class="q-mt-sm" v-if="p.filePath || p.image || p.video">
+            <div class="q-mt-md" v-if="p.filePath || p.image || p.video">
               <template v-if="p.filePath">
-                <q-img v-if="isImagePath(p.filePath)" :src="mediaUrl(p.filePath)" class="rounded-borders thumb-300" fit="cover" />
-                <AutoVideo v-else :src="mediaUrl(p.filePath)" class="rounded-borders thumb-300 q-mt-md" />
+                <q-img v-if="isImagePath(p.filePath)" :src="mediaUrl(p.filePath)" class="rounded-borders thumb-300" fit="cover" @error="onMediaError(p.filePath)" />
+                <AutoVideo v-else :src="mediaUrl(p.filePath)" class="rounded-borders thumb-300 q-mt-md" @error="onMediaError(p.filePath)" />
               </template>
               <template v-else>
-                <q-img v-if="p.image" :src="mediaUrl(p.image)" class="rounded-borders thumb-300" fit="cover" />
-                <AutoVideo v-else-if="p.video" :src="mediaUrl(p.video)" class="rounded-borders thumb-300 q-mt-md" />
+                <q-img v-if="p.image" :src="mediaUrl(p.image)" class="rounded-borders thumb-300" fit="cover" @error="onMediaError(p.image)" />
+                <AutoVideo v-else-if="p.video" :src="mediaUrl(p.video)" class="rounded-borders thumb-300 q-mt-md" @error="onMediaError(p.video)" />
               </template>
             </div>
           </q-card-section>
           <q-separator />
-          <q-card-actions class="row items-center justify-between">
+          <q-card-actions align="between">
             <div class="row items-center q-gutter-sm">
-              <q-btn class="like-btn" dense round icon="thumb_up" :flat="!hasLiked(p)" :color="hasLiked(p) ? 'primary' : undefined" :disable="hasLiked(p)" :aria-label="hasLiked(p) ? 'Ya diste like' : 'Dar like'" @click="onLike(p)" />
+              <q-btn
+                class="like-btn"
+                dense
+                round
+                icon="thumb_up"
+                :flat="!hasLiked(p)"
+                :color="hasLiked(p) ? 'primary' : undefined"
+                :disable="hasLiked(p)"
+                :aria-label="hasLiked(p) ? 'Ya diste like' : 'Dar like'"
+                @click="onLike(p)"
+              />
               <div class="text-caption">{{ p.likes ?? 0 }}</div>
             </div>
             <div>
@@ -182,22 +147,19 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue';
-import { useRouter } from 'vue-router';
 import AutoVideo from '../components/AutoVideo.vue';
 import { usePostStore, type Post, type PostSize } from '../stores/postStore';
 import { useAuthStore } from '../stores/authStore';
-import { likePost, uploadLogo as apiUploadLogo, uploadBackground as apiUploadBackground } from '../services/api';
+import { likePost } from '../services/api';
 import { useQuasar } from 'quasar';
 import { computeMediaUrl as computeUrl, isImagePath as isImg } from '../utils/media';
 import { useSettingsStore } from '../stores/settingsStore';
 import type { SettingsDto } from '../services/api';
 
 const postStore = usePostStore();
-const router = useRouter();
 const auth = useAuthStore();
 const $q = useQuasar();
 const settingsStore = useSettingsStore();
-function goUsers() { void router.push('/users'); }
 
 // Settings local copy for editing
 const featuredOptions = [
@@ -210,8 +172,7 @@ const sizeOptions = [
   { label: 'Mediano', value: 'medium' },
   { label: 'Pequeño', value: 'small' },
 ] as const;
-// Paleta simplificada
-const colorKeys = ['primary', 'secondary', 'accent'] as const;
+const colorKeys = ['primary', 'secondary', 'accent', 'positive', 'negative', 'info', 'warning'] as const;
 const localSettings = reactive<{ featuredLayout: 1 | 2 | 4; colors: SettingsDto['colors'] }>({
   featuredLayout: settingsStore.featuredLayout,
   colors: { ...settingsStore.colors },
@@ -237,45 +198,6 @@ async function saveSettings() {
   } finally {
     savingSettings.value = false;
   }
-}
-
-// Identidad visual
-const logoFile = ref<File | null>(null);
-const bgFile = ref<File | null>(null);
-const savingLogo = ref(false);
-const savingBg = ref(false);
-const errorUpload = ref('');
-
-async function saveLogo() {
-  if (!logoFile.value) return;
-  savingLogo.value = true;
-  errorUpload.value = '';
-  try {
-    const data = await apiUploadLogo(logoFile.value, auth.token);
-    settingsStore.colors = { ...settingsStore.colors, ...data.colors } as SettingsDto['colors'];
-    if (typeof data.logoUrl === 'string') settingsStore.logoUrl = data.logoUrl;
-    $q.notify({ type: 'positive', message: 'Logo actualizado' });
-    logoFile.value = null;
-  } catch (e: unknown) {
-    errorUpload.value = e instanceof Error ? e.message : 'No se pudo subir el logo';
-    $q.notify({ type: 'negative', message: errorUpload.value });
-  } finally { savingLogo.value = false; }
-}
-
-async function saveBackground() {
-  if (!bgFile.value) return;
-  savingBg.value = true;
-  errorUpload.value = '';
-  try {
-    const data = await apiUploadBackground(bgFile.value, auth.token);
-    settingsStore.colors = { ...settingsStore.colors, ...data.colors } as SettingsDto['colors'];
-    if (typeof data.backgroundUrl === 'string') settingsStore.backgroundUrl = data.backgroundUrl;
-    $q.notify({ type: 'positive', message: 'Fondo actualizado' });
-    bgFile.value = null;
-  } catch (e: unknown) {
-    errorUpload.value = e instanceof Error ? e.message : 'No se pudo subir el fondo';
-    $q.notify({ type: 'negative', message: errorUpload.value });
-  } finally { savingBg.value = false; }
 }
 
 // Listado
@@ -308,21 +230,21 @@ async function loadPosts() {
 onMounted(loadPosts);
 
 // Crear
-const form = reactive<{ title: string; content: string; size: PostSize; urgent: boolean; expiresAt: string | null }>({ title: '', content: '', size: 'medium', urgent: false, expiresAt: null });
+const form = reactive<{ title: string; content: string; size: PostSize }>({ title: '', content: '', size: 'medium' });
 const createFile = ref<File | null>(null);
 const loadingCreate = ref(false);
 const errorCreate = ref('');
+
+// q-file usa v-model directamente, no hace falta onFileChange
 
 async function onCreate() {
   loadingCreate.value = true;
   errorCreate.value = '';
   try {
-    const payload: { title: string; content: string; size: PostSize; urgent?: boolean; expiresAt?: string; file?: File | null } = {
+    const payload: { title: string; content: string; size: PostSize; file?: File | null } = {
       title: form.title,
       content: form.content,
       size: form.size,
-      urgent: form.urgent,
-      ...(form.expiresAt ? { expiresAt: form.expiresAt } : {}),
       ...(createFile.value ? { file: createFile.value } : {}),
     };
     await postStore.createPost(payload);
@@ -330,8 +252,6 @@ async function onCreate() {
     form.title = '';
     form.content = '';
     form.size = 'medium';
-    form.urgent = false;
-    form.expiresAt = null;
     createFile.value = null;
   } catch (e: unknown) {
     let msg = 'No se pudo crear el post';
@@ -351,7 +271,7 @@ async function onCreate() {
 
 // Editar
 const editingId = ref<string | number | null>(null);
-const editForm = reactive<{ title: string; content: string; size: PostSize; urgent: boolean; expiresAt: string | null }>({ title: '', content: '', size: 'medium', urgent: false, expiresAt: null });
+const editForm = reactive<{ title: string; content: string; size: PostSize }>({ title: '', content: '', size: 'medium' });
 const editFile = ref<File | null>(null);
 const loadingUpdate = ref(false);
 const errorUpdate = ref('');
@@ -361,8 +281,6 @@ function startEdit(p: Post) {
   editForm.title = p.title || '';
   editForm.content = p.content || '';
   editForm.size = p.size ?? 'medium';
-  editForm.urgent = Boolean(p.urgent);
-  editForm.expiresAt = p.expiresAt ? String(p.expiresAt).slice(0, 10) : null;
   editFile.value = null;
 }
 
@@ -371,8 +289,6 @@ function cancelEdit() {
   editForm.title = '';
   editForm.content = '';
   editForm.size = 'medium';
-  editForm.urgent = false;
-  editForm.expiresAt = null;
   editFile.value = null;
   errorUpdate.value = '';
 }
@@ -382,12 +298,10 @@ async function onUpdate() {
   loadingUpdate.value = true;
   errorUpdate.value = '';
   try {
-    const payload: { title?: string; content?: string; size?: PostSize; urgent?: boolean; expiresAt?: string; file?: File | null } = {
+    const payload: { title?: string; content?: string; size?: PostSize; file?: File | null } = {
       title: editForm.title,
       content: editForm.content,
       size: editForm.size,
-      urgent: editForm.urgent,
-      ...(editForm.expiresAt ? { expiresAt: editForm.expiresAt } : {}),
       ...(editFile.value ? { file: editFile.value } : {}),
     };
     await postStore.updatePost(editingId.value, payload);
@@ -460,7 +374,9 @@ async function onLike(p: Post) {
   }
 }
 
-//
+function onMediaError(src?: string) {
+  $q.notify({ type: 'negative', message: `No se pudo cargar media: ${src || ''}` });
+}
 </script>
 
 <style scoped>
@@ -478,3 +394,4 @@ async function onLike(p: Post) {
   height: 300px;
 }
 </style>
+
